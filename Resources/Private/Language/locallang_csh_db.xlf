@@ -89,6 +89,9 @@
 			<trans-unit id="fe_users_mapping.description">
 				<source>Assign LDAP attribute to a field of the user record.</source>
 			</trans-unit>
+			<trans-unit id="object_guid.description" resname="object_guid.description">
+				<source>objectGuid</source>
+			</trans-unit>
 
 			<trans-unit id="fe_groups_basedn.description">
 				<source>DN (Distinguished Name) to be used to look for FE groups in the LDAP server.</source>

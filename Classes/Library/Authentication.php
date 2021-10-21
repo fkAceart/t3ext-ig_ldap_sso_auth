@@ -125,7 +125,7 @@ class Authentication
                 if ($userdn === true) {
                     return true;
                 }
-                return static::synchroniseUser($userdn, $username);
+                return static::synchroniseUser($userdn["dn"], $userdn["objectGuid"], $username);
             } else {
                 static::$lastAuthenticationDiagnostic = $ldapInstance->getLastBindDiagnostic();
                 if (!empty(static::$lastAuthenticationDiagnostic)) {
@@ -165,7 +165,7 @@ class Authentication
      * @param $username
      * @return array|false
      */
-    public static function synchroniseUser($userdn, $username = null)
+    public static function synchroniseUser($userdn, $objectCrud, $username = null)
     {
         // User is valid. Get it from DN.
         $ldapUser = static::getLdapUser($userdn);
@@ -182,7 +182,7 @@ class Authentication
         $typo3_users_pid = Configuration::getPid(static::$config['users']['mapping']);
 
         // Get TYPO3 user from username, DN and pid.
-        $typo3_user = static::getTypo3User($username, $userdn, $typo3_users_pid);
+        $typo3_user = static::getTypo3User($username, $userdn, $objectCrud, $typo3_users_pid);
         if ($typo3_user === null) {
             // Non-existing local users are not allowed to authenticate
             return false;
@@ -516,11 +516,11 @@ class Authentication
      * @param int|null $pid
      * @return array
      */
-    protected static function getTypo3User($username, $userDn, $pid = null)
+    protected static function getTypo3User($username, $userDn, $objectCrud, $pid = null)
     {
         $user = null;
 
-        $typo3_users = Typo3UserRepository::fetch(static::$authenticationService->authInfo['db_user']['table'], 0, $pid, $username, $userDn);
+        $typo3_users = Typo3UserRepository::fetch(static::$authenticationService->authInfo['db_user']['table'], 0, $pid, $username, $userDn, $objectCrud);
         if ($typo3_users) {
             // Check option "Users that are not already present in TYPO3 may not log on"
             // Note: there is no need to manually remove users with inactive starttime/endtime since
@@ -626,7 +626,7 @@ class Authentication
             if (isset($mapping['username']) && preg_match("`<([^$]*)>`", $mapping['username'])) {
                 $username = static::replaceLdapMarkers($mapping['username'], $ldapUser);
             }
-            $existingTypo3Users = Typo3UserRepository::fetch($table, 0, $pid, $username, $ldapUser['dn']);
+            $existingTypo3Users = Typo3UserRepository::fetch($table, 0, $pid, $username, $ldapUser['dn'], $ldapUser["objectguid"][0]);
 
             if (count($existingTypo3Users) > 0) {
                 $typo3User = $existingTypo3Users[0];
@@ -643,6 +643,7 @@ class Authentication
 
         return $typo3Users;
     }
+
 
     /**
      * Merges a user from LDAP and from TYPO3.

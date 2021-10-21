@@ -425,10 +425,25 @@ class LdapUtility
         $this->status['get_first_entry']['status'] = ldap_error($this->connection);
         $attributes = @ldap_get_attributes($this->connection, $this->firstResultEntry);
         $tempEntry = [];
+
+        // Hook for processing the attributes
+        if (is_array($GLOBALS['TYPO3_CONF_VARS']['EXTCONF']['ig_ldap_sso_auth']['attributesProcessing'])) {
+            foreach ($GLOBALS['TYPO3_CONF_VARS']['EXTCONF']['ig_ldap_sso_auth']['attributesProcessing'] as $className) {
+                /** @var \Causal\IgLdapSsoAuth\Utility\AttributesProcessorInterface $postProcessor */
+                $postProcessor = GeneralUtility::makeInstance($className);
+                if ($postProcessor instanceof \Causal\IgLdapSsoAuth\Utility\AttributesProcessorInterface) {
+                    $postProcessor->processAttributes($this->connection, $entry, $attributes);
+                } else {
+                    throw new \RuntimeException('Processor ' . get_class($postProcessor) . ' must implement the \\Causal\\IgLdapSsoAuth\\Utility\\AttributesProcessorInterface interface', 1430307683);
+                }
+            }
+        }
+
         foreach ($attributes as $key => $value) {
             $tempEntry[strtolower($key)] = $value;
         }
         $entry = $this->convertCharacterSetForArray($tempEntry, $this->ldapCharacterSet, $this->typo3CharacterSet);
+
         return $entry;
     }
 
@@ -444,6 +459,33 @@ class LdapUtility
             $dn = ldap_get_dn($this->connection, $this->firstResultEntry);
         }
         return $dn;
+    }
+
+    /**
+     * Returns the attributes.
+     *
+     * @return array
+     */
+    public function getObjectGuid()
+    {
+        $attributes = [];
+        if (is_resource($this->firstResultEntry)) {
+            $attributes = ldap_get_attributes($this->connection, $this->firstResultEntry);
+
+            // Hook for processing the attributes
+            if (is_array($GLOBALS['TYPO3_CONF_VARS']['EXTCONF']['ig_ldap_sso_auth']['attributesProcessing'])) {
+                foreach ($GLOBALS['TYPO3_CONF_VARS']['EXTCONF']['ig_ldap_sso_auth']['attributesProcessing'] as $className) {
+                    /** @var \Causal\IgLdapSsoAuth\Utility\AttributesProcessorInterface $postProcessor */
+                    $postProcessor = GeneralUtility::makeInstance($className);
+                    if ($postProcessor instanceof \Causal\IgLdapSsoAuth\Utility\AttributesProcessorInterface) {
+                        $postProcessor->processAttributes($this->connection, null, $attributes);
+                    } else {
+                        throw new \RuntimeException('Processor ' . get_class($postProcessor) . ' must implement the \\Causal\\IgLdapSsoAuth\\Utility\\AttributesProcessorInterface interface', 1430307683);
+                    }
+                }
+            }
+        }
+        return $attributes["objectGUID"][0];
     }
 
     /**

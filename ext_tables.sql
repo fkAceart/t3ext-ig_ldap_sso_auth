@@ -84,5 +84,7 @@ CREATE TABLE fe_users (
 	tx_igldapssoauth_dn varchar(255) DEFAULT '' NOT NULL,
 	tx_igldapssoauth_id int(11) unsigned DEFAULT '0' NOT NULL,
 
+	object_guid varchar(255) DEFAULT '' NOT NULL,
+
 	KEY tx_igldapssoauth_dn (tx_igldapssoauth_dn(64))
 );

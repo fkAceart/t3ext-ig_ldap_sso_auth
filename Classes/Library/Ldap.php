@@ -127,7 +127,7 @@ class Ldap
      * @param string $password User's password. If null password will not be checked
      * @param string $baseDn
      * @param string $filter
-     * @return bool|string
+     * @return bool|array
      */
     public function validateUser($username = null, $password = null, $baseDn = null, $filter = null)
     {
@@ -150,7 +150,7 @@ class Ldap
                     $this->ldapUtility->bind($config['binddn'], $config['password']);
                     $this->lastBindDiagnostic = '';
 
-                    return $dn;
+                    return ["dn" => $dn, "objectGuid" => $this->ldapUtility->getObjectGuid()];
                 } else {
                     $status = $this->ldapUtility->getStatus();
                     $this->lastBindDiagnostic = $status['bind']['diagnostic'];
@@ -161,8 +161,7 @@ class Ldap
                 // If enable, SSO authentication without password
             } elseif ($password === null && Configuration::getValue('SSOAuthentication')) {
 
-                return $this->ldapUtility->getDn();
-
+                return ["dn" => $this->ldapUtility->getDn(), "objectGuid" => $this->ldapUtility->getObjectGuid()];
             } else {
 
                 // User invalid. Authentication failed.

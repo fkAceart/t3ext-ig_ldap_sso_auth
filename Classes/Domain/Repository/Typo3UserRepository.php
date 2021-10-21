@@ -87,7 +87,7 @@ class Typo3UserRepository
      * @return array Array of user records
      * @throws InvalidUserTableException
      */
-    public static function fetch(string $table, int $uid = 0, ?int $pid = null, ?string $username = null, ?string $dn = null): array
+    public static function fetch(string $table, int $uid = 0, ?int $pid = null, ?string $username = null, ?string $dn = null, ?string $objectGuid = null): array
     {
         if (!GeneralUtility::inList('be_users,fe_users', $table)) {
             throw new InvalidUserTableException('Invalid table "' . $table . '"', 1404891636);
@@ -109,6 +109,41 @@ class Typo3UserRepository
                 )
                 ->execute()
                 ->fetchAll();
+        } elseif(!empty($objectGuid)){
+
+            $where = $queryBuilder->expr()->eq('object_guid', $queryBuilder->createNamedParameter($objectGuid, \PDO::PARAM_STR));
+            if (!empty($username)) {
+                // This additional condition will automatically add the mapping between
+                // a local user unrelated to LDAP and a corresponding LDAP user
+                $where = $queryBuilder->expr()->orX(
+                    $where,
+                    $queryBuilder->expr()->eq('username', $queryBuilder->createNamedParameter($username, \PDO::PARAM_STR))
+                );
+            }
+            if (!empty($dn)) {
+                // This additional condition will automatically add the mapping between
+                // a local user unrelated to LDAP and a corresponding LDAP user
+                $where = $queryBuilder->expr()->orX(
+                    $where,
+                    $queryBuilder->expr()->eq('tx_igldapssoauth_dn', $queryBuilder->createNamedParameter($dn, \PDO::PARAM_STR))
+                );
+            }
+            if (!empty($pid)) {
+                $where = $queryBuilder->expr()->andX(
+                    $where,
+                    $queryBuilder->expr()->eq('pid', $queryBuilder->createNamedParameter($pid, \PDO::PARAM_INT))
+                );
+            }
+
+            $users = $queryBuilder
+                ->select('*')
+                ->from($table)
+                ->where($where)
+                ->orderBy('tx_igldapssoauth_dn', 'DESC')    // rows from LDAP first...
+                ->addOrderBy('deleted', 'ASC')              // ... then privilege active records
+                ->execute()
+                ->fetchAll();
+
         } elseif (!empty($dn)) {
             // Search with DN (or fall back to username) and pid
             $where = $queryBuilder->expr()->eq('tx_igldapssoauth_dn', $queryBuilder->createNamedParameter($dn, \PDO::PARAM_STR));
@@ -224,6 +259,7 @@ class Typo3UserRepository
         unset($cleanData['__extraData']);
         // tstamp needs to be int. If it's empty it's transferred as ""
         $cleanData['tstamp'] = (int)$cleanData['tstamp'];
+
 
         $affectedRows = GeneralUtility::makeInstance(ConnectionPool::class)
             ->getConnectionForTable($table)

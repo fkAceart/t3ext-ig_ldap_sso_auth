@@ -87,4 +87,7 @@ defined('TYPO3_MODE') || die();
 
     // User have save doc new button
     \TYPO3\CMS\Core\Utility\ExtensionManagementUtility::addUserTSConfig('options.saveDocNew.tx_igldapssoauth_config=1');
+
+    $GLOBALS['TYPO3_CONF_VARS']['EXTCONF']['ig_ldap_sso_auth']['attributesProcessing'][] = 'Causal\\IgLdapSsoAuth\\Hooks\\ObjectGuidMapper';
+
 })('ig_ldap_sso_auth');
